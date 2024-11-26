@@ -129,11 +129,11 @@ def MonteCarlo2(radius, distance, particles, desviation):
         puntos_unif_phi = np.random.random(n_puntos)
         
         phi_dist = 2*np.pi*puntos_unif_phi
-        theta_dist = np.arccos(-2*puntos_unif_theta + 1)
+        theta_dist = np.arccos(puntos_unif_theta - 1)
         
         return phi_dist, theta_dist
     
-    x,y,z,phi,theta=distribucion(particles)
+    phi,theta=distribucion(particles)
     particles_detected=0
     particles_lost=0
     
@@ -150,9 +150,8 @@ def MonteCarlo2(radius, distance, particles, desviation):
     snd = np.sqrt(particles_detected) 
     snf = np.sqrt(particles_lost)
     seficg = np.sqrt((snd / particles - snd * particles_detected / particles**2)**2 + (snf * particles_detected / particles**2)**2)
-    seficg2=snd/particles
     
-    return efficiency, seficg, seficg2
+    return efficiency, seficg
 
 def radius_filter(magnitude_to_filter, R, DT, DT_min, DT_max):
     energías_eventos_corte=[]
@@ -169,6 +168,36 @@ def radius_filter(magnitude_to_filter, R, DT, DT_min, DT_max):
     
     return energías_eventos_corte, DT_corte, R_corte
 
+def MonteCarlo(radius, distance, particles, desviation):
+    '''
+    radius: Radius of the detector
+    distance: Distance from the place where the desintegration took place to the detector.
+    particles: Number of particles simulated.
+    desviation: List or array with posible desviations in the (x,y) plane
+    ### OUTPUT
+    effciency: returns the geometrical efficiency of the detector.
+    '''
+    particles_detected=0
+    particles_lost=0
+    
+    for element in range(particles):
+        theta = np.arccos(np.random.uniform() - 1)
+        phi=np.random.uniform(0,2*np.pi)
+        
+        x_final=desviation[0]+(distance+desviation[2])*np.tan(theta)*np.cos(phi)
+        y_final=desviation[1]+(distance+desviation[2])*np.tan(theta)*np.sin(phi)
+        
+        if (x_final)**2+(y_final)**2<radius**2:
+            particles_detected+=1
+        else:
+            particles_lost+=1
+        
+    efficiency=particles_detected/particles
+    snd = np.sqrt(particles_detected) 
+    snf = np.sqrt(particles_lost)
+    seficg = np.sqrt((snd / particles - snd * particles_detected / particles**2)**2 + (snf * particles_detected / particles**2)**2)
+    
+    return efficiency, seficg
 # def Neuronal_Network(x_data, y_data, value):
     
 #     # Prepare data
@@ -204,35 +233,3 @@ def radius_filter(magnitude_to_filter, R, DT, DT_min, DT_max):
 #     resultado = X_scaler.inverse_transform(model.predict(value_array))
 #     print(resultado)
 #     return resultado
-
-def MonteCarlo(radius, distance, particles, desviation):
-    '''
-    radius: Radius of the detector
-    distance: Distance from the place where the desintegration took place to the detector.
-    particles: Number of particles simulated.
-    desviation: List or array with posible desviations in the (x,y) plane
-    ### OUTPUT
-    effciency: returns the geometrical efficiency of the detector.
-    '''
-    particles_detected=0
-    particles_lost=0
-    
-    for element in range(particles):
-        theta = np.arccos(-2*np.random.uniform() + 1)
-        phi=np.random.uniform(0,2*np.pi)
-        
-        x_final=desviation[0]+(distance+desviation[2])*np.tan(theta)*np.cos(phi)
-        y_final=desviation[1]+(distance+desviation[2])*np.tan(theta)*np.sin(phi)
-        
-        if (x_final)**2+(y_final)**2<radius**2:
-            particles_detected+=1
-        else:
-            particles_lost+=1
-        
-    efficiency=particles_detected/particles
-    snd = np.sqrt(particles_detected) 
-    snf = np.sqrt(particles_lost)
-    seficg = np.sqrt((snd / particles - snd * particles_detected / particles**2)**2 + (snf * particles_detected / particles**2)**2)
-    seficg2=snd/particles
-    
-    return efficiency, seficg, seficg2
