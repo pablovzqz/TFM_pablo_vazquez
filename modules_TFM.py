@@ -9,6 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic
 from scipy.interpolate import interp1d
+# import tensorflow as tf
+# from sklearn.preprocessing import MinMaxScaler
 
 def profiles(xdata,ydata,n_bins=50,x_label=None, y_label=None, plot=False):
     '''
@@ -112,7 +114,7 @@ def interpolation(x_data, y_data, point, kind='linear'):
     
     return value
 
-def MonteCarlo(radius, distance, particles, desviation):
+def MonteCarlo2(radius, distance, particles, desviation):
     '''
     radius: Radius of the detector
     distance: Distance from the place where the desintegration took place to the detector.
@@ -127,13 +129,9 @@ def MonteCarlo(radius, distance, particles, desviation):
         puntos_unif_phi = np.random.random(n_puntos)
         
         phi_dist = 2*np.pi*puntos_unif_phi
-        theta_dist = np.arccos(puntos_unif_theta - 1)
+        theta_dist = np.arccos(-2*puntos_unif_theta + 1)
         
-        x = np.sin(theta_dist)*np.cos(phi_dist)
-        y = np.sin(theta_dist)*np.sin(phi_dist)
-        z = np.cos(theta_dist)
-        
-        return x, y, z, phi_dist, theta_dist
+        return phi_dist, theta_dist
     
     x,y,z,phi,theta=distribucion(particles)
     particles_detected=0
@@ -149,5 +147,92 @@ def MonteCarlo(radius, distance, particles, desviation):
             particles_lost+=1
     
     efficiency=particles_detected/particles
-    return efficiency
+    snd = np.sqrt(particles_detected) 
+    snf = np.sqrt(particles_lost)
+    seficg = np.sqrt((snd / particles - snd * particles_detected / particles**2)**2 + (snf * particles_detected / particles**2)**2)
+    seficg2=snd/particles
+    
+    return efficiency, seficg, seficg2
 
+def radius_filter(magnitude_to_filter, R, DT, DT_min, DT_max):
+    energías_eventos_corte=[]
+    DT_corte=[]
+    R_corte=[]
+    
+    for i in range(len(magnitude_to_filter)):
+        if DT_max>DT[i] and DT_min<DT[i]:
+            energías_eventos_corte.append(magnitude_to_filter[i])
+            R_corte.append(R[i])
+            DT_corte.append(DT[i])
+            
+    print(f'El porcentaje de eventos dentro de este corte es {np.round(len(energías_eventos_corte)/len(magnitude_to_filter)*100,3)}%')
+    
+    return energías_eventos_corte, DT_corte, R_corte
+
+# def Neuronal_Network(x_data, y_data, value):
+    
+#     # Prepare data
+#     x = y_data.to_numpy().reshape(-1, 1)
+#     y = x_data.to_numpy().reshape(-1, 1)
+#     X_scaler = MinMaxScaler()
+#     y_scaler = MinMaxScaler()
+#     X = X_scaler.fit_transform(x)
+#     Y = y_scaler.fit_transform(y)
+
+#     model = tf.keras.Sequential([
+#         tf.keras.layers.Dense(units=1, activation='linear', input_shape=[1]),
+#         tf.keras.layers.Dense(units=64, activation='relu'),  # Reduced units
+#         tf.keras.layers.Dense(units=128, activation='relu'),
+#         tf.keras.layers.Dense(units=64, activation='relu'),# Reduced units
+#         tf.keras.layers.Dense(units=1, activation='linear')
+#     ])
+    
+#     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001), loss='mean_squared_error')
+    
+#     # Training with a larger batch size and early stopping
+#     print("Comenzando entrenamiento...")
+#     historial = model.fit(X, Y, epochs=1000, batch_size=1024, verbose=False)
+#     print("Modelo entrenado")
+    
+#     # Plot loss curve
+#     plt.xlabel('#Epoch')
+#     plt.ylabel('Loss')
+#     plt.plot(historial.history["loss"])
+#     value_array = np.array([[value]])
+#     # Make predictions
+#     print('Hagamos unas predicciones')
+#     resultado = X_scaler.inverse_transform(model.predict(value_array))
+#     print(resultado)
+#     return resultado
+
+def MonteCarlo(radius, distance, particles, desviation):
+    '''
+    radius: Radius of the detector
+    distance: Distance from the place where the desintegration took place to the detector.
+    particles: Number of particles simulated.
+    desviation: List or array with posible desviations in the (x,y) plane
+    ### OUTPUT
+    effciency: returns the geometrical efficiency of the detector.
+    '''
+    particles_detected=0
+    particles_lost=0
+    
+    for element in range(particles):
+        theta = np.arccos(-2*np.random.uniform() + 1)
+        phi=np.random.uniform(0,2*np.pi)
+        
+        x_final=desviation[0]+(distance+desviation[2])*np.tan(theta)*np.cos(phi)
+        y_final=desviation[1]+(distance+desviation[2])*np.tan(theta)*np.sin(phi)
+        
+        if (x_final)**2+(y_final)**2<radius**2:
+            particles_detected+=1
+        else:
+            particles_lost+=1
+        
+    efficiency=particles_detected/particles
+    snd = np.sqrt(particles_detected) 
+    snf = np.sqrt(particles_lost)
+    seficg = np.sqrt((snd / particles - snd * particles_detected / particles**2)**2 + (snf * particles_detected / particles**2)**2)
+    seficg2=snd/particles
+    
+    return efficiency, seficg, seficg2
