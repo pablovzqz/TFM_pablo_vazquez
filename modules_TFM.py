@@ -9,8 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic
 from scipy.interpolate import interp1d
-# import tensorflow as tf
-# from sklearn.preprocessing import MinMaxScaler
+import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler
 
 def profiles(xdata,ydata,n_bins=50,x_label=None, y_label=None, plot=False):
     '''
@@ -198,6 +198,17 @@ def MonteCarlo(radius, distance, particles, desviation):
     seficg = np.sqrt((snd / particles - snd * particles_detected / particles**2)**2 + (snf * particles_detected / particles**2)**2)
     
     return efficiency, seficg
+
+def pull(data, uncertainty, expected_value, plot=False):
+    normalized_data=(data-expected_value)/uncertainty
+    if plot==True:
+        counts, bin_edges = np.histogram(normalized_data.T, bins=25, density=True)
+        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])  
+        errors = np.sqrt(counts) / np.sum(counts)  
+
+        plt.hist(normalized_data.T, bins=25, edgecolor='black', density=True, label='pull')
+        plt.errorbar(bin_centers, counts, yerr=errors,fmt='.', color='black')
+        
 # def Neuronal_Network(x_data, y_data, value):
     
 #     # Prepare data
@@ -210,9 +221,9 @@ def MonteCarlo(radius, distance, particles, desviation):
 
 #     model = tf.keras.Sequential([
 #         tf.keras.layers.Dense(units=1, activation='linear', input_shape=[1]),
-#         tf.keras.layers.Dense(units=64, activation='relu'),  # Reduced units
-#         tf.keras.layers.Dense(units=128, activation='relu'),
-#         tf.keras.layers.Dense(units=64, activation='relu'),# Reduced units
+#         tf.keras.layers.Dense(units=64, activation='softplus'),  # Reduced units
+#         tf.keras.layers.Dense(units=128, activation='softplus'),
+#         tf.keras.layers.Dense(units=64, activation='softplus'),# Reduced units
 #         tf.keras.layers.Dense(units=1, activation='linear')
 #     ])
     
