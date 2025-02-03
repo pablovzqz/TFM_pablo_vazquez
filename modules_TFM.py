@@ -12,7 +12,7 @@ from scipy.stats import binned_statistic_2d
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 
-def profiles(xdata,ydata, threshold, n_bins=50 ,x_label=None, y_label=None, plot=False):
+def profiles(xdata,ydata, threshold, n_bins=50 ,x_label=None, y_label=None, plot=False, normalize=False):
     '''
     xdata: np.array or 1 column dataframe with data for the x-axes
     ydata: np.array or 1 column dataframe with data for the x-axes
@@ -30,11 +30,12 @@ def profiles(xdata,ydata, threshold, n_bins=50 ,x_label=None, y_label=None, plot
     std_y, _, _ = binned_statistic(xdata_filtered, ydata_filtered, statistic='std', bins=n_bins)
     count, _, _ = binned_statistic(xdata_filtered, ydata_filtered, statistic='count', bins=n_bins)
 
-    # if mean_y.any()<0: print(True)
-    # else: print(False)
 
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    uncertainty = std_y 
+    if normalize==True:
+        uncertainty = std_y/np.sqrt(count)
+    else:
+        uncertainty = std_y
     if plot==True:
         fig, ax1 = plt.subplots()
     
@@ -59,7 +60,7 @@ def profiles(xdata,ydata, threshold, n_bins=50 ,x_label=None, y_label=None, plot
         
         plt.show()
     
-    return bin_centers, mean_y, uncertainty, count
+    return bin_centers, mean_y, uncertainty
     
 def filter_center_axial(Energy,Radial_position,DT,cut):
     '''
@@ -268,19 +269,22 @@ def histogram_parameters(parameters, bins, plot=False):
     
     return expected_parameter, np.sqrt(pcov[1][1])
 
-def DT_predictor(x_data,y_data,n_bins=50):
+def DT_predictor(x_data,y_data, threshold ,n_bins=50):
     '''
     x_data: array with data in the x-axis (S2w for example)
     y_data: array with data in the y-axis (DT)
     '''
-    x,y,sy=profiles(x_data, y_data, threshold=1, n_bins=50)
-    y_p,uncert_y,_=profiles(x, sy, threshold=1, n_bins=50)
+    x,y,sy=profiles(x_data, y_data, threshold, n_bins=n_bins)
+    y_p,uncert_y,_=profiles(x, sy, threshold, n_bins=n_bins)
     
     def prediction(x0):
         '''
         x0: value of S2w for which we want to compute the DT.
+        ###
+        Output:
+        array which has as a first component the value for DT predicted and the uncertainty as the second component
         '''
-        interp_value=interpolation(x, y, x0, kind='linear')
+        interp_value=interpolation(x, y, x0, kind='cubic')
         interp_uncertainty=interpolation(y_p, uncert_y, x0)    
     
         return interp_value, interp_uncertainty
@@ -308,3 +312,20 @@ def histogram_2d(x_data, y_data, z_data, n_bins=50, stat='mean', cmap='jet',xlab
     
     return mean
 
+class Data1d:
+    '''
+    class which data, you must give (x,y) values so it stores it as data
+    '''
+    def __init__(self, xdata, ydata, Yrms):
+        self.xdata=xdata
+        self.ydata=ydata
+        self.rms_y=Yrms
+        return
+    def __str__(self):
+        return f'({self.xdata}, {self.ydata})'
+    
+    def fit(self, function ,p0):
+        popt, pcov = curve_fit(function, self.xdata, self.ydata, p0=p0)
+        return popt, pcov
+    def plot(self):
+        return plt.errorbar(self.xdata, self.ydata, self.rms_y, fmt='.', elinewidth=.5, ecolor='black', color = 'red', label='Data points')
